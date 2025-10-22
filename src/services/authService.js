@@ -5,6 +5,8 @@ import config from '../config/index.js'
 import { hashPassword, verifyPassword } from '../utils/crypto.js'
 import tokenService from './tokenService.js'
 import otpService from './otpService.js'
+import roleService from './roleService.js'
+import { permissionsFromRoles } from '../utils/permissions.js'
 
 export const register = async ({ email, phone, password }, context = {}) => {
   const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email])
@@ -28,14 +30,18 @@ export const register = async ({ email, phone, password }, context = {}) => {
     , [id, email, phone || null, passwordHash]
   )
 
+  await roleService.assignRole({ userId: id, role: 'user' })
+  const roles = await roleService.getRolesForUser(id)
+  const permissions = permissionsFromRoles(roles)
+
   await recordActivity({ userId: id, action: 'REGISTER', ip: context.ip, ua: context.ua })
 
-  await otpService.sendOtp({ destination: email, purpose: 'verify_email', channel: 'email' })
+  await otpService.sendOtp({ userId: id, destination: email, purpose: 'verify_email', channel: 'email' })
   if (phone) {
-    await otpService.sendOtp({ destination: phone, purpose: 'verify_phone', channel: 'sms' })
+    await otpService.sendOtp({ userId: id, destination: phone, purpose: 'verify_phone', channel: 'sms' })
   }
 
-  return { id }
+  return { id, roles, permissions }
 }
 
 export const login = async ({ emailOrPhone, password }, context = {}) => {
@@ -58,15 +64,13 @@ export const login = async ({ emailOrPhone, password }, context = {}) => {
     throw createError(401, 'Invalid credentials', { code: 'INVALID_CREDENTIALS' })
   }
 
-  const rolesResult = await pool.query(
-    `SELECT r.name FROM roles r JOIN user_roles ur ON ur.role_id = r.id WHERE ur.user_id = $1`
-    , [user.id]
-  )
-  const roles = rolesResult.rows.map(r => r.name)
+  const roles = await roleService.getRolesForUser(user.id)
+  const permissions = permissionsFromRoles(roles)
 
   const session = await tokenService.createSession({
     userId: user.id,
     roles,
+    permissions,
     scope: 'user',
     ip: context.ip,
     ua: context.ua
@@ -76,6 +80,8 @@ export const login = async ({ emailOrPhone, password }, context = {}) => {
 
   return {
     userId: user.id,
+    roles,
+    permissions,
     ...session
   }
 }
