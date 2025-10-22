@@ -27,6 +27,19 @@ const readKeyIfExists = (filePath) => {
 const accessTtl = process.env.ACCESS_TTL || '15m'
 const refreshTtl = process.env.REFRESH_TTL || '30d'
 
+const gmailUser = process.env.GMAIL_USER
+const gmailAppPassword = process.env.GMAIL_APP_PASSWORD
+const derivedSmtpHost = process.env.SMTP_HOST || (gmailUser ? 'smtp.gmail.com' : undefined)
+const derivedSmtpPort = numberFromEnv('SMTP_PORT', gmailUser ? 465 : 587)
+const derivedSmtpFrom = process.env.SMTP_FROM || gmailUser
+const resolveSmtpSecure = () => {
+  if (process.env.SMTP_SECURE !== undefined) {
+    return process.env.SMTP_SECURE === 'true'
+  }
+  return Boolean(gmailUser)
+}
+const smtpSecure = resolveSmtpSecure()
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT || 8001),
@@ -47,11 +60,12 @@ export const config = {
     sms: process.env.PROVIDER_SMS || 'TWILIO'
   },
   smtp: {
-    host: process.env.SMTP_HOST,
-    port: numberFromEnv('SMTP_PORT', 587),
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-    from: process.env.SMTP_FROM
+    host: derivedSmtpHost,
+    port: derivedSmtpPort,
+    user: process.env.SMTP_USER || gmailUser,
+    pass: process.env.SMTP_PASS || gmailAppPassword,
+    from: derivedSmtpFrom,
+    secure: smtpSecure
   },
   twilio: {
     sid: process.env.TWILIO_SID,

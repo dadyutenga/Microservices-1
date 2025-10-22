@@ -8,7 +8,13 @@ export const register = async (req, res, next) => {
   try {
     const payload = registerSchema.parse(req.body)
     const result = await authService.register(payload, { ip: req.ip, ua: req.headers['user-agent'] })
-    res.status(201).json({ userId: result.id, emailSent: true, smsSent: Boolean(payload.phone) })
+    res.status(201).json({
+      userId: result.id,
+      roles: result.roles,
+      permissions: result.permissions,
+      emailSent: true,
+      smsSent: Boolean(payload.phone)
+    })
   } catch (err) {
     next(err)
   }
@@ -22,6 +28,8 @@ export const login = async (req, res, next) => {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
       userId: result.userId,
+      roles: result.roles,
+      permissions: result.permissions,
       expiresIn: config.jwt.accessTtlSeconds
     })
   } catch (err) {
@@ -33,7 +41,7 @@ export const refresh = async (req, res, next) => {
   try {
     const payload = refreshSchema.parse(req.body)
     const result = await authService.refresh(payload, { ip: req.ip, ua: req.headers['user-agent'] })
-    res.json(result)
+    res.json({ ...result, expiresIn: config.jwt.accessTtlSeconds })
   } catch (err) {
     next(err)
   }
@@ -70,7 +78,7 @@ export const verifyToken = async (req, res, next) => {
       throw createError(400, 'token required', { code: 'VALIDATION_ERROR' })
     }
     const decoded = tokenService.verify(token)
-    res.json({ valid: true, sub: decoded.sub, roles: decoded.roles, scope: decoded.scope, exp: decoded.exp })
+    res.json({ valid: true, sub: decoded.sub, roles: decoded.roles, permissions: decoded.permissions, scope: decoded.scope, exp: decoded.exp })
   } catch (err) {
     if (err.status) {
       next(err)

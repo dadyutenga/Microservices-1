@@ -18,6 +18,7 @@ export const authMiddleware = (required = true) => {
       req.user = {
         id: decoded.sub,
         roles: decoded.roles || [],
+        permissions: decoded.permissions || [],
         scope: decoded.scope,
         sessionId: decoded.sid,
         tokenId: decoded.jti
@@ -36,6 +37,19 @@ export const requireRoles = (roles = []) => {
     }
     const hasRole = roles.some(role => req.user.roles.includes(role))
     if (!hasRole) {
+      return next(createError(403, 'Forbidden', { code: 'FORBIDDEN' }))
+    }
+    return next()
+  }
+}
+
+export const requirePermissions = (permissions = []) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return next(createError(401, 'Unauthorized', { code: 'UNAUTHORIZED' }))
+    }
+    const hasPermission = permissions.some(permission => req.user.permissions.includes(permission))
+    if (!hasPermission) {
       return next(createError(403, 'Forbidden', { code: 'FORBIDDEN' }))
     }
     return next()

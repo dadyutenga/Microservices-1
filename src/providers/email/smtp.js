@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 
-export const createSmtpProvider = (options) => {
+export const createSmtpProvider = (options = {}) => {
   if (!options.host) {
     const transporter = nodemailer.createTransport({ jsonTransport: true })
     return {
@@ -14,7 +14,7 @@ export const createSmtpProvider = (options) => {
   const transporter = nodemailer.createTransport({
     host: options.host,
     port: options.port,
-    secure: options.port === 465,
+    secure: options.secure ?? options.port === 465,
     auth: options.user && options.pass ? { user: options.user, pass: options.pass } : undefined
   })
 
@@ -24,7 +24,7 @@ export const createSmtpProvider = (options) => {
         to,
         subject,
         html,
-        from: options.from
+        from: options.from || options.user
       })
     }
   }

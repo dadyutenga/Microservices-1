@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+const positiveInt = z.coerce.number().int().min(1)
+
 export const registerSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(6).max(32).optional(),
@@ -39,8 +41,27 @@ export const recoveryRequestSchema = z.object({
 })
 
 export const recoveryConfirmSchema = z.object({
+  emailOrPhone: z.string(),
   tokenOrOtp: z.string(),
   newPassword: z.string().min(8)
+})
+
+export const roleAssignSchema = z.object({
+  userId: z.string().uuid(),
+  role: z.enum(['admin', 'manager', 'user', 'service'])
+})
+
+export const roleUserParamsSchema = z.object({
+  id: z.string().uuid()
+})
+
+export const analyticsSummaryQuerySchema = z.object({
+  window: positiveInt.max(90).optional(),
+  paymentsWindow: positiveInt.max(180).optional()
+})
+
+export const analyticsActivityQuerySchema = z.object({
+  days: positiveInt.max(30).optional()
 })
 
 export default {
@@ -52,5 +73,9 @@ export default {
   logoutSchema,
   mfaVerifySchema,
   recoveryRequestSchema,
-  recoveryConfirmSchema
+  recoveryConfirmSchema,
+  roleAssignSchema,
+  roleUserParamsSchema,
+  analyticsSummaryQuerySchema,
+  analyticsActivityQuerySchema
 }

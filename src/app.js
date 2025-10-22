@@ -7,9 +7,12 @@ import requestId from './middlewares/requestId.js'
 import authRoutes from './routes/auth.routes.js'
 import otpRoutes from './routes/otp.routes.js'
 import mfaRoutes from './routes/mfa.routes.js'
-import { metricsHandler } from './metrics/index.js'
+import recoveryRoutes from './routes/recovery.routes.js'
+import rolesRoutes from './routes/roles.routes.js'
+import statusRoutes from './routes/status.routes.js'
+import analyticsRoutes from './routes/analytics.routes.js'
+import { metricsHandler, httpRequestDuration } from './metrics/index.js'
 import { liveness, readiness } from './health/index.js'
-import { httpRequestDuration } from './metrics/index.js'
 import config from './config/index.js'
 
 const app = express()
@@ -48,6 +51,10 @@ app.get('/metrics', metricsHandler)
 app.use('/v1', authRoutes)
 app.use('/v1/otp', otpRoutes)
 app.use('/v1/mfa', mfaRoutes)
+app.use('/v1/recovery', recoveryRoutes)
+app.use('/v1/roles', rolesRoutes)
+app.use('/v1/status', statusRoutes)
+app.use('/v1/analytics', analyticsRoutes)
 
 app.use((req, res, next) => {
   next(createError(404, 'Not Found', { code: 'NOT_FOUND' }))
