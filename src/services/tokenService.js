@@ -7,9 +7,9 @@ import { hashToken } from '../utils/crypto.js'
 import { permissionsFromRoles } from '../utils/permissions.js'
 import roleService from './roleService.js'
 
-export const createSession = async ({ userId, roles = [], permissions, scope, ip, ua }) => {
+export const createSession = async ({ userId, roles = [], scope, ip, ua }) => {
   const sessionId = uuid()
-  const effectivePermissions = permissions || permissionsFromRoles(roles)
+  const effectivePermissions = permissionsFromRoles(roles)
   const { token: accessToken, jti: accessJti } = signAccessToken({ sub: userId, roles, permissions: effectivePermissions, scope, sid: sessionId })
   const { token: refreshToken, jti: refreshJti } = signRefreshToken({ sub: userId, roles, permissions: effectivePermissions, scope, sid: sessionId })
 
@@ -51,12 +51,14 @@ export const rotateRefreshToken = async ({ refreshToken, ip, ua }) => {
   const { user_id: userId } = rows[0]
   const sessionId = decoded.sid
   const roles = await roleService.getRolesForUser(userId)
-  const effectiveRoles = roles.length ? roles : (decoded.roles || [])
-  const permissions = permissionsFromRoles(effectiveRoles)
+  if (!roles || roles.length === 0) {
+    throw createError(403, 'Account roles revoked', { code: 'ROLES_REVOKED' })
+  }
+  const permissions = permissionsFromRoles(roles)
   const scope = decoded.scope
 
-  const { token: newAccessToken, jti: newAccessJti } = signAccessToken({ sub: userId, roles: effectiveRoles, permissions, scope, sid: sessionId })
-  const { token: newRefreshToken, jti: newRefreshJti } = signRefreshToken({ sub: userId, roles: effectiveRoles, permissions, scope, sid: sessionId })
+  const { token: newAccessToken, jti: newAccessJti } = signAccessToken({ sub: userId, roles, permissions, scope, sid: sessionId })
+  const { token: newRefreshToken, jti: newRefreshJti } = signRefreshToken({ sub: userId, roles, permissions, scope, sid: sessionId })
 
   const client = await pool.connect()
   try {
@@ -81,7 +83,7 @@ export const rotateRefreshToken = async ({ refreshToken, ip, ua }) => {
     sessionId,
     accessJti: newAccessJti,
     refreshJti: newRefreshJti,
-    roles: effectiveRoles,
+    roles,
     permissions
   }
 }
