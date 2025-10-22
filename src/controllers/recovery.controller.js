@@ -1,17 +1,15 @@
 import recoveryService from '../services/recoveryService.js'
 import { recoveryRequestSchema, recoveryConfirmSchema } from '../utils/validators.js'
-import config from '../config/index.js'
 
 export const requestRecovery = async (req, res, next) => {
   try {
     const payload = recoveryRequestSchema.parse(req.body)
     const result = await recoveryService.requestRecovery(payload)
     const response = {
-      delivered: result.delivered,
-      expiresAt: result.expiresAt
+      delivered: result.delivered
     }
-    if (config.env === 'development') {
-      response.token = result.token
+    if (result.expiresAt) {
+      response.expiresAt = result.expiresAt
     }
     res.status(202).json(response)
   } catch (err) {

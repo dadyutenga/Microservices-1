@@ -1,6 +1,31 @@
 import { z } from 'zod'
 
 const positiveInt = z.coerce.number().int().min(1)
+const phoneRegex = /^\+?[1-9]\d{7,14}$/
+const passwordComplexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$/
+
+const emailOrPhoneSchema = z.union([
+  z
+    .string({ required_error: 'Email or phone is required' })
+    .trim()
+    .email({ message: 'Invalid email format' }),
+  z
+    .string({ required_error: 'Email or phone is required' })
+    .trim()
+    .regex(phoneRegex, { message: 'Invalid phone number format' })
+])
+
+const recoveryCodeSchema = z
+  .string({ required_error: 'Recovery code is required' })
+  .trim()
+  .regex(/^\d{6}$/, { message: 'Recovery code must be a 6-digit numeric code' })
+
+const strongPasswordSchema = z
+  .string({ required_error: 'New password is required' })
+  .min(8, { message: 'Password must be at least 8 characters long' })
+  .regex(passwordComplexityRegex, {
+    message: 'Password must include uppercase, lowercase, number, and special character'
+  })
 
 export const registerSchema = z.object({
   email: z.string().email(),
@@ -37,13 +62,13 @@ export const mfaVerifySchema = z.object({
 })
 
 export const recoveryRequestSchema = z.object({
-  emailOrPhone: z.string()
+  emailOrPhone: emailOrPhoneSchema
 })
 
 export const recoveryConfirmSchema = z.object({
-  emailOrPhone: z.string(),
-  tokenOrOtp: z.string(),
-  newPassword: z.string().min(8)
+  emailOrPhone: emailOrPhoneSchema,
+  tokenOrOtp: recoveryCodeSchema,
+  newPassword: strongPasswordSchema
 })
 
 export const roleAssignSchema = z.object({

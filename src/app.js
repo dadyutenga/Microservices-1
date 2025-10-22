@@ -3,6 +3,7 @@ import helmet from 'helmet'
 import cors from 'cors'
 import morgan from 'morgan'
 import createError from 'http-errors'
+import { ZodError } from 'zod'
 import requestId from './middlewares/requestId.js'
 import authRoutes from './routes/auth.routes.js'
 import otpRoutes from './routes/otp.routes.js'
@@ -61,6 +62,18 @@ app.use((req, res, next) => {
 })
 
 app.use((err, req, res, next) => {
+  if (err instanceof ZodError) {
+    return res.status(400).json({
+      code: 'VALIDATION_ERROR',
+      message: 'Validation failed',
+      errors: err.errors.map(issue => ({
+        path: issue.path,
+        message: issue.message,
+        code: issue.code
+      }))
+    })
+  }
+
   const status = err.status || 500
   res.status(status).json({
     code: err.code || (status >= 500 ? 'SERVER_ERROR' : 'ERROR'),

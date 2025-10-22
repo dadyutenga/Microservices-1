@@ -70,7 +70,6 @@ export const login = async ({ emailOrPhone, password }, context = {}) => {
   const session = await tokenService.createSession({
     userId: user.id,
     roles,
-    permissions,
     scope: 'user',
     ip: context.ip,
     ua: context.ua
